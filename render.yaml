@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: mf-stock
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    autoDeploy: true
