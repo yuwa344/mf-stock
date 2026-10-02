@@ -63,7 +63,7 @@ public final class Api {
     private static volatile List<Map<String, Object>> universeCache;
     private static final Object UNI_LOCK = new Object();
 
-    /** Full A-share universe (SH/SZ/BJ), disk-cached per day. Fields kept compact. */
+    /** Full A-share universe (SH/SZ/BJ), disk-cached per day; falls back to bundled seed file. */
     public static List<Map<String, Object>> universe() throws Exception {
         List<Map<String, Object>> c = universeCache;
         if (c != null) return c;
@@ -81,6 +81,45 @@ public final class Api {
                     }
                 } catch (Exception ignore) { }
             }
+            try {
+                List<Map<String, Object>> all = fetchUniverse();
+                if (all.isEmpty()) throw new IOException("universe fetch returned empty");
+                Map<String, Object> save = new LinkedHashMap<>();
+                save.put("date", today);
+                save.put("stocks", all);
+                Files.createDirectories(f.getParent());
+                Files.writeString(f, Json.write(save), StandardCharsets.UTF_8);
+                universeCache = all;
+                return all;
+            } catch (Exception e) {
+                // network blocked (e.g. datacenter IP) -> use bundled seed snapshot
+                List<Map<String, Object>> seed = loadSeedUniverse();
+                if (seed != null && !seed.isEmpty()) {
+                    universeCache = seed;
+                    return seed;
+                }
+                throw e;
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> loadSeedUniverse() {
+        try {
+            Path sp = Paths.get("seed", "universe.json");
+            if (!Files.exists(sp)) return null;
+            Map<String, Object> saved = Json.map(Json.parse(Files.readString(sp, StandardCharsets.UTF_8)));
+            List<Object> l = Json.list(saved.get("stocks"));
+            if (l == null) return null;
+            List<Map<String, Object>> out = new ArrayList<>(l.size());
+            for (Object o : l) out.add((Map<String, Object>) o);
+            return out;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static List<Map<String, Object>> fetchUniverse() throws Exception {
             List<Map<String, Object>> all = new ArrayList<>(6000);
             int pn = 1;
             while (pn <= 90) {
@@ -120,14 +159,7 @@ public final class Api {
                 pn++;
             }
             if (all.isEmpty()) throw new IOException("universe fetch failed");
-            Map<String, Object> save = new LinkedHashMap<>();
-            save.put("date", today);
-            save.put("stocks", all);
-            Files.createDirectories(f.getParent());
-            Files.writeString(f, Json.write(save), StandardCharsets.UTF_8);
-            universeCache = all;
             return all;
-        }
     }
 
     @SuppressWarnings("unchecked")
