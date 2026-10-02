@@ -153,7 +153,7 @@ public final class Scanner {
 
     private static void persist(List<Map<String, Object>> rows, int[] counts) {
         try {
-            Path f = Paths.get("data", "scan.json");
+            Path f = Api.DATA_DIR.resolve("scan.json");
             Files.createDirectories(f.getParent());
             List<Integer> boxed = new ArrayList<>();
             for (int v : counts) boxed.add(v);
@@ -169,7 +169,7 @@ public final class Scanner {
     @SuppressWarnings("unchecked")
     public static void loadPersisted() {
         try {
-            Path f = Paths.get("data", "scan.json");
+            Path f = Api.DATA_DIR.resolve("scan.json");
             if (!Files.exists(f)) return;
             Map<String, Object> save = Json.map(Json.parse(Files.readString(f, StandardCharsets.UTF_8)));
             List<Object> rows = Json.list(save.get("rows"));

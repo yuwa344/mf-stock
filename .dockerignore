@@ -1,0 +1,7 @@
+classes/
+data/
+diag/
+.git/
+.gitignore
+*.log
+README.md

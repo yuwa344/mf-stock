@@ -214,7 +214,7 @@ public final class StockServer {
 
     private static synchronized List<String> readWatchlist() {
         try {
-            Path f = Paths.get("data", "watchlist.json");
+            Path f = Api.DATA_DIR.resolve("watchlist.json");
             if (!Files.exists(f)) return new ArrayList<>();
             List<Object> l = Json.list(Json.parse(Files.readString(f, StandardCharsets.UTF_8)));
             List<String> out = new ArrayList<>();
@@ -225,7 +225,7 @@ public final class StockServer {
 
     private static synchronized void writeWatchlist(List<String> codes) {
         try {
-            Path f = Paths.get("data", "watchlist.json");
+            Path f = Api.DATA_DIR.resolve("watchlist.json");
             Files.createDirectories(f.getParent());
             Files.writeString(f, Json.write(codes), StandardCharsets.UTF_8);
         } catch (Exception ignore) { }

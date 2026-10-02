@@ -69,7 +69,7 @@ public final class Api {
         if (c != null) return c;
         synchronized (UNI_LOCK) {
             if (universeCache != null) return universeCache;
-            Path f = Paths.get("data", "universe.json");
+            Path f = Api.DATA_DIR.resolve("universe.json");
             String today = LocalDate.now().format(DF);
             if (Files.exists(f)) {
                 try {
@@ -180,6 +180,35 @@ public final class Api {
         public int n() { return dates.length; }
     }
 
+    // ---------------- data dir (writable on any platform) ----------------
+    /** Resolve a writable data dir: $MF_DATA_DIR -> ./data -> temp fallback (Space containers may be read-only). */
+    public static final Path DATA_DIR = resolveDataDir();
+
+    private static Path resolveDataDir() {
+        try {
+            String env = System.getenv("MF_DATA_DIR");
+            if (env != null && !env.isEmpty()) {
+                Path p = Paths.get(env);
+                Files.createDirectories(p);
+                return p;
+            }
+            Path p = Paths.get("data");
+            Files.createDirectories(p);
+            Path probe = p.resolve(".wtest");
+            Files.writeString(probe, "1");
+            Files.delete(probe);
+            return p;
+        } catch (Exception e) {
+            try {
+                Path p = Paths.get(System.getProperty("java.io.tmpdir"), "mfstock-data");
+                Files.createDirectories(p);
+                return p;
+            } catch (Exception e2) {
+                return Paths.get(".");
+            }
+        }
+    }
+
     /** secid prefix: SH=1 (6xxxxx), SZ/BJ=0 (0/2/3/4/8/92) */
     public static String secid(String code) {
         return code.startsWith("6") ? "1." + code : "0." + code;
@@ -213,7 +242,7 @@ public final class Api {
     private static final Breaker EAST_BR = new Breaker(), TX_BR = new Breaker();
 
     public static K kline(String code, Double floatShares) throws Exception {
-        Path f = Paths.get("data", "klines", code + ".csv");
+        Path f = Api.DATA_DIR.resolve("klines").resolve(code + ".csv");
         if (Files.exists(f)) {
             try {
                 List<String> lines = Files.readAllLines(f, StandardCharsets.UTF_8);
